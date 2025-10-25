@@ -175,11 +175,11 @@
         }
 
         /* Цветные линии только для журнала выполнения */
-        #tab2 tr {
+        #tab1 tr {
             position: relative;
         }
 
-        #tab2 tr::before {
+        #tab1 tr::before {
             content: '';
             position: absolute;
             left: 0;
@@ -190,12 +190,12 @@
         }
 
         /* Зеленая линия для выполненных задач */
-        #tab2 .completed::before {
+        #tab1 .completed::before {
             background-color: #4caf50;
         }
 
         /* Оранжевая линия для невыполненных задач */
-        #tab2 .pending::before {
+        #tab1 .pending::before {
             background-color: #ff9800;
         }
 
@@ -253,6 +253,52 @@
             border: 1px solid #444;
         }
 
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #ccc;
+            font-style: italic;
+        }
+
+        .error {
+            text-align: center;
+            padding: 20px;
+            color: #f44336;
+            background: #2a1a1a;
+            border-radius: 6px;
+            margin: 10px 0;
+            border: 1px solid #f44336;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background-color: #4caf50;
+            border: 1px solid #45a049;
+        }
+
+        .notification.error {
+            background-color: #f44336;
+            border: 1px solid #d32f2f;
+        }
+
         /* Адаптация для мобильных устройств */
         @media (max-width: 768px) {
             body {
@@ -296,6 +342,17 @@
                 font-size: 11px;
                 min-width: 40px;
             }
+
+            .notification {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                transform: translateY(-100%);
+            }
+
+            .notification.show {
+                transform: translateY(0);
+            }
         }
 
         @media (max-width: 480px) {
@@ -321,16 +378,40 @@
     </style>
 </head>
 <body>
+    <div class="notification" id="notification"></div>
+
     <div class="container">
         <div class="tabs">
-            <button class="tab-btn active" data-tab="tab1">СПИСОК ЗАДАЧ</button>
             <button class="tab-btn" data-tab="tab2">ЖУРНАЛ ВЫПОЛНЕНИЯ</button>
+            <button class="tab-btn" data-tab="tab1">СПИСОК ЗАДАЧ</button>
         </div>
         
-        <div class="tab-content active" id="tab1">
+        <div class="tab-content active" id="tab2">
+            <h2>ЖУРНАЛ ВЫПОЛНЕНИЯ</h2>
+            <div class="table-container">
+                <table id="journal-table">
+                    <thead>
+                        <tr>
+                            <th>Номер<br>задачи</th>
+                            <th>Задача</th>
+                            <th>Дата появления<br>задачи</th>
+                            <th>Дата<br>выполнения</th>
+                            <th>Выполнил</th>
+                        </tr>
+                    </thead>
+                    <tbody id="journal-body">
+                        <tr>
+                            <td colspan="5" class="loading">Загрузка данных...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="tab1">
             <h2>СПИСОК ЗАДАЧ</h2>
             <div class="table-container">
-                <table>
+                <table id="tasks-table">
                     <thead>
                         <tr>
                             <th>Номер<br>задачи</th>
@@ -342,126 +423,9 @@
                             <th>Дата<br>след. цикла</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="tasks-body">
                         <tr>
-                            <td>1</td>
-                            <td>Проверить сервер</td>
-                            <td>15.10.2023</td>
-                            <td>5</td>
-                            <td>7</td>
-                            <td><span class="status-outline warning">2</span></td>
-                            <td>22.10.2023</td>
-                        </tr>
-                        <tr>
-                            <td>2</td>
-                            <td>Обновить ПО</td>
-                            <td>10.10.2023</td>
-                            <td>10</td>
-                            <td>30</td>
-                            <td><span class="status-outline success">20</span></td>
-                            <td>09.11.2023</td>
-                        </tr>
-                        <tr>
-                            <td>3</td>
-                            <td>Резервное копирование</td>
-                            <td>18.10.2023</td>
-                            <td>2</td>
-                            <td>3</td>
-                            <td><span class="status-outline danger">1</span></td>
-                            <td>21.10.2023</td>
-                        </tr>
-                        <tr>
-                            <td>4</td>
-                            <td>Проверить безопасность</td>
-                            <td>01.10.2023</td>
-                            <td>19</td>
-                            <td>14</td>
-                            <td><span class="status-outline danger">-5</span></td>
-                            <td>15.10.2023</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <div class="tab-content" id="tab2">
-            <h2>ЖУРНАЛ ВЫПОЛНЕНИЯ</h2>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Номер<br>задачи</th>
-                            <th>Задача</th>
-                            <th>Дата появления<br>задачи</th>
-                            <th>Дата<br>выполнения</th>
-                            <th>Выполнил</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Невыполненные задачи (вверху) -->
-                        <tr class="pending">
-                            <td>6</td>
-                            <td>Обновить документацию</td>
-                            <td>12.10.2023</td>
-                            <td>-</td>
-                            <td>
-                                <select>
-                                    <option value="">-- Выберите --</option>
-                                    <option value="Вадим">Вадим</option>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr class="pending">
-                            <td>5</td>
-                            <td>Настроить мониторинг</td>
-                            <td>10.10.2023</td>
-                            <td>-</td>
-                            <td>
-                                <select>
-                                    <option value="">-- Выберите --</option>
-                                    <option value="Вадим">Вадим</option>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr class="pending">
-                            <td>4</td>
-                            <td>Проверить безопасность</td>
-                            <td>05.08.2023</td>
-                            <td>-</td>
-                            <td>
-                                <select>
-                                    <option value="">-- Выберите --</option>
-                                    <option value="Вадим">Вадим</option>
-                                </select>
-                            </td>
-                        </tr>
-                        
-                        <!-- Линия разделения -->
-                        <tr class="divider-row">
-                            <td colspan="5"></td>
-                        </tr>
-                        
-                        <!-- Выполненные задачи (внизу) -->
-                        <tr class="completed">
-                            <td>3</td>
-                            <td>Резервное копирование</td>
-                            <td>20.09.2023</td>
-                            <td>18.10.2023</td>
-                            <td>Вадим</td>
-                        </tr>
-                        <tr class="completed">
-                            <td>2</td>
-                            <td>Обновить ПО</td>
-                            <td>15.08.2023</td>
-                            <td>10.10.2023</td>
-                            <td>Вадим</td>
-                        </tr>
-                        <tr class="completed">
-                            <td>1</td>
-                            <td>Проверить сервер</td>
-                            <td>01.09.2023</td>
-                            <td>15.10.2023</td>
-                            <td>Вадим</td>
+                            <td colspan="7" class="loading">Загрузка данных...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -470,9 +434,202 @@
     </div>
 
     <script>
+        // Конфигурация - ЗАМЕНИТЕ НА ВАШ URL GOOGLE APPS SCRIPT
+        const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbykFdYyLbreyLifEnHN4Ye7vGtanGhcdRb_zroFBTTw0pDX-YPvfMw0jT2I7PtzIduh/exec';
+
+        // Функция для показа уведомлений
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Функция для запросов с обработкой CORS
+        async function makeRequest(url, options = {}) {
+            try {
+                // Для GET запросов добавляем timestamp чтобы избежать кеширования
+                if (!options.method || options.method === 'GET') {
+                    const separator = url.includes('?') ? '&' : '?';
+                    url = `${url}${separator}_=${Date.now()}`;
+                }
+                
+                const response = await fetch(url, options);
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Ошибка запроса:', error);
+                throw error;
+            }
+        }
+
+        // Функции API
+        async function loadTasks() {
+            try {
+                const tasksBody = document.getElementById('tasks-body');
+                tasksBody.innerHTML = '<tr><td colspan="7" class="loading">Загрузка данных...</td></tr>';
+                
+                const tasks = await makeRequest(`${BACKEND_URL}?action=getTasks`);
+                renderTasksTable(tasks);
+                
+            } catch (error) {
+                console.error('Ошибка загрузки задач:', error);
+                const tasksBody = document.getElementById('tasks-body');
+                tasksBody.innerHTML = `<tr><td colspan="7" class="error">Ошибка загрузки: ${error.message}</td></tr>`;
+                showNotification('Ошибка загрузки задач', 'error');
+            }
+        }
+
+        async function loadJournal() {
+            try {
+                const journalBody = document.getElementById('journal-body');
+                journalBody.innerHTML = '<tr><td colspan="5" class="loading">Загрузка данных...</td></tr>';
+                
+                const journal = await makeRequest(`${BACKEND_URL}?action=getJournal`);
+                renderJournalTable(journal);
+                
+            } catch (error) {
+                console.error('Ошибка загрузки журнала:', error);
+                const journalBody = document.getElementById('journal-body');
+                journalBody.innerHTML = `<tr><td colspan="5" class="error">Ошибка загрузки: ${error.message}</td></tr>`;
+                showNotification('Ошибка загрузки журнала', 'error');
+            }
+        }
+
+        async function completeTask(taskId, executor) {
+            try {
+                const result = await makeRequest(BACKEND_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'completeTask',
+                        taskId: taskId,
+                        executor: executor
+                    })
+                });
+                
+                if (result.success) {
+                    showNotification('Задача успешно выполнена!');
+                    // Перезагружаем данные
+                    loadTasks();
+                    loadJournal();
+                } else {
+                    showNotification('Ошибка: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка выполнения задачи:', error);
+                showNotification('Ошибка выполнения задачи: ' + error.message, 'error');
+            }
+        }
+
+        function renderTasksTable(tasks) {
+            const tasksBody = document.getElementById('tasks-body');
+            
+            if (!tasks || tasks.length === 0) {
+                tasksBody.innerHTML = '<tr><td colspan="7" class="loading">Нет задач</td></tr>';
+                return;
+            }
+            
+            tasksBody.innerHTML = tasks.map(task => {
+                // Определяем стиль для статуса
+                let statusClass = 'success';
+                if (task.daysLeft <= 0) {
+                    statusClass = 'danger';
+                } else if (task.daysLeft <= 2) {
+                    statusClass = 'warning';
+                }
+                
+                return `
+                    <tr>
+                        <td>${task.id}</td>
+                        <td>${task.task}</td>
+                        <td>${task.lastDate || '-'}</td>
+                        <td>${task.daysPassed}</td>
+                        <td>${task.frequency}</td>
+                        <td><span class="status-outline ${statusClass}">${task.daysLeft}</span></td>
+                        <td>${task.nextDate || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderJournalTable(journal) {
+            const journalBody = document.getElementById('journal-body');
+            
+            if (!journal || journal.length === 0) {
+                journalBody.innerHTML = '<tr><td colspan="5" class="loading">Нет данных</td></tr>';
+                return;
+            }
+            
+            // Разделяем выполненные и невыполненные задачи
+            const pendingTasks = journal.filter(item => !item.isCompleted);
+            const completedTasks = journal.filter(item => item.isCompleted);
+            
+            let html = '';
+            
+            // Невыполненные задачи (вверху)
+            pendingTasks.forEach(task => {
+                html += `
+                    <tr class="pending">
+                        <td>${task.id}</td>
+                        <td>${task.task}</td>
+                        <td>${task.createdDate}</td>
+                        <td>${task.completedDate}</td>
+                        <td>
+                            <select onchange="handleExecutorChange(this, ${task.id})">
+                                <option value="">-- Выберите --</option>
+                                <option value="Вадим">Вадим</option>
+                                <option value="Иван">Иван</option>
+                                <option value="Мария">Мария</option>
+                                <option value="Алексей">Алексей</option>
+                            </select>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            // Добавляем разделитель если есть обе категории
+            if (pendingTasks.length > 0 && completedTasks.length > 0) {
+                html += '<tr class="divider-row"><td colspan="5"></td></tr>';
+            }
+            
+            // Выполненные задачи (внизу)
+            completedTasks.forEach(task => {
+                html += `
+                    <tr class="completed">
+                        <td>${task.id}</td>
+                        <td>${task.task}</td>
+                        <td>${task.createdDate}</td>
+                        <td>${task.completedDate}</td>
+                        <td>${task.executor}</td>
+                    </tr>
+                `;
+            });
+            
+            journalBody.innerHTML = html;
+        }
+
+        function handleExecutorChange(select, taskId) {
+            if (select.value) {
+                completeTask(taskId, select.value);
+                // Блокируем select до завершения операции
+                select.disabled = true;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const tabButtons = document.querySelectorAll('.tab-btn');
             const tabContents = document.querySelectorAll('.tab-content');
+            
+            // Загрузка данных при открытии страницы
+            loadJournal();
+            loadTasks();
             
             tabButtons.forEach(button => {
                 button.addEventListener('click', () => {
@@ -486,30 +643,43 @@
                     // Показываем соответствующий контент
                     const tabId = button.getAttribute('data-tab');
                     document.getElementById(tabId).classList.add('active');
-                });
-            });
-
-            // Обработка выбора исполнителя
-            const selects = document.querySelectorAll('select');
-            selects.forEach(select => {
-                select.addEventListener('change', function() {
-                    if (this.value === 'Вадим') {
-                        const row = this.closest('tr');
-                        row.classList.remove('pending');
-                        row.classList.add('completed');
-                        
-                        // Устанавливаем текущую дату выполнения
-                        const dateCell = row.cells[3];
-                        const today = new Date();
-                        dateCell.textContent = today.toLocaleDateString('ru-RU');
-                        
-                        // Заменяем select на текст
-                        const executorCell = row.cells[4];
-                        executorCell.textContent = 'Вадим';
+                    
+                    // Перезагружаем данные при переключении вкладок
+                    if (tabId === 'tab1') {
+                        loadTasks();
+                    } else if (tabId === 'tab2') {
+                        loadJournal();
                     }
                 });
             });
+
+            // Автоматическое обновление данных каждые 30 секунд
+            setInterval(() => {
+                const activeTab = document.querySelector('.tab-content.active');
+                if (activeTab.id === 'tab1') {
+                    loadTasks();
+                } else if (activeTab.id === 'tab2') {
+                    loadJournal();
+                }
+            }, 30000);
+
+            // Показываем уведомление о загрузке
+            showNotification('Приложение загружено', 'success');
         });
+
+        // Функция для тестирования подключения
+        async function testConnection() {
+            try {
+                const result = await makeRequest(`${BACKEND_URL}?action=test`);
+                if (result.success) {
+                    showNotification('Подключение к серверу успешно!', 'success');
+                } else {
+                    showNotification('Ошибка подключения: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Ошибка подключения к серверу', 'error');
+            }
+        }
     </script>
 </body>
 </html>

@@ -382,11 +382,11 @@
 
     <div class="container">
         <div class="tabs">
-            <button class="tab-btn" data-tab="tab2">ЖУРНАЛ ВЫПОЛНЕНИЯ</button>
-            <button class="tab-btn" data-tab="tab1">СПИСОК ЗАДАЧ</button>
+            <button class="tab-btn active" data-tab="tab1">ЖУРНАЛ ВЫПОЛНЕНИЯ</button>
+            <button class="tab-btn" data-tab="tab2">СПИСОК ЗАДАЧ</button>
         </div>
         
-        <div class="tab-content active" id="tab2">
+        <div class="tab-content active" id="tab1">
             <h2>ЖУРНАЛ ВЫПОЛНЕНИЯ</h2>
             <div class="table-container">
                 <table id="journal-table">
@@ -408,7 +408,7 @@
             </div>
         </div>
         
-        <div class="tab-content" id="tab1">
+        <div class="tab-content" id="tab2">
             <h2>СПИСОК ЗАДАЧ</h2>
             <div class="table-container">
                 <table id="tasks-table">
@@ -435,7 +435,7 @@
 
     <script>
         // Конфигурация - ЗАМЕНИТЕ НА ВАШ URL GOOGLE APPS SCRIPT
-        const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbykFdYyLbreyLifEnHN4Ye7vGtanGhcdRb_zroFBTTw0pDX-YPvfMw0jT2I7PtzIduh/exec';
+        const BACKEND_URL = 'https://script.google.com/macros/s/AKfycby-3mPi5PbQ-99t9F7MF0FIOi7aluUO6RXBpa6PVjFpEy73GxW44jpv9iCYWXPD44U9/exec';
 
         // Функция для показа уведомлений
         function showNotification(message, type = 'success') {
@@ -500,31 +500,23 @@
             }
         }
 
-        async function completeTask(taskId, executor) {
+        async function completeTask(taskId, executor, rowIndex) {
             try {
-                const result = await makeRequest(BACKEND_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'completeTask',
-                        taskId: taskId,
-                        executor: executor
-                    })
-                });
+                // Формируем URL для записи в колонку E (индекс 4) в листе B
+                const updateUrl = `${BACKEND_URL}?action=updateCell&sheetName=B&column=E&row=${rowIndex}&value=${encodeURIComponent(executor)}`;
+                
+                const result = await makeRequest(updateUrl);
                 
                 if (result.success) {
-                    showNotification('Задача успешно выполнена!');
-                    // Перезагружаем данные
-                    loadTasks();
+                    showNotification('Имя исполнителя успешно записано в таблицу!');
+                    // Перезагружаем журнал для отображения обновленных данных
                     loadJournal();
                 } else {
                     showNotification('Ошибка: ' + result.error, 'error');
                 }
             } catch (error) {
-                console.error('Ошибка выполнения задачи:', error);
-                showNotification('Ошибка выполнения задачи: ' + error.message, 'error');
+                console.error('Ошибка записи имени:', error);
+                showNotification('Ошибка записи имени: ' + error.message, 'error');
             }
         }
 
@@ -574,7 +566,9 @@
             let html = '';
             
             // Невыполненные задачи (вверху)
-            pendingTasks.forEach(task => {
+            pendingTasks.forEach((task, index) => {
+                // Для невыполненных задач используем rowIndex из данных
+                const rowIndex = task.rowIndex || (index + 2); // +2 потому что в Google Sheets первая строка - заголовки
                 html += `
                     <tr class="pending">
                         <td>${task.id}</td>
@@ -582,7 +576,7 @@
                         <td>${task.createdDate}</td>
                         <td>${task.completedDate}</td>
                         <td>
-                            <select onchange="handleExecutorChange(this, ${task.id})">
+                            <select onchange="handleExecutorChange(this, ${task.id}, ${rowIndex})">
                                 <option value="">-- Выберите --</option>
                                 <option value="Вадим">Вадим</option>
                                 <option value="Иван">Иван</option>
@@ -615,9 +609,9 @@
             journalBody.innerHTML = html;
         }
 
-        function handleExecutorChange(select, taskId) {
+        function handleExecutorChange(select, taskId, rowIndex) {
             if (select.value) {
-                completeTask(taskId, select.value);
+                completeTask(taskId, select.value, rowIndex);
                 // Блокируем select до завершения операции
                 select.disabled = true;
             }
@@ -645,9 +639,9 @@
                     document.getElementById(tabId).classList.add('active');
                     
                     // Перезагружаем данные при переключении вкладок
-                    if (tabId === 'tab1') {
+                    if (tabId === 'tab2') {
                         loadTasks();
-                    } else if (tabId === 'tab2') {
+                    } else if (tabId === 'tab1') {
                         loadJournal();
                     }
                 });
@@ -656,9 +650,9 @@
             // Автоматическое обновление данных каждые 30 секунд
             setInterval(() => {
                 const activeTab = document.querySelector('.tab-content.active');
-                if (activeTab.id === 'tab1') {
+                if (activeTab.id === 'tab2') {
                     loadTasks();
-                } else if (activeTab.id === 'tab2') {
+                } else if (activeTab.id === 'tab1') {
                     loadJournal();
                 }
             }, 30000);

@@ -82,7 +82,7 @@
 
         th, td {
             padding: 10px 8px;
-            text-align: left;
+            text-align: center;
             border-bottom: 1px solid #444;
             white-space: normal;
             word-wrap: break-word;
@@ -98,26 +98,32 @@
             font-size: 12px;
         }
 
+        tr {
+            position: relative;
+        }
+
+        /* Цветные линии для выполненных и невыполненных задач */
+        tr::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+        }
+
+        /* Зеленая линия для выполненных задач */
+        .completed::before {
+            background-color: #4caf50;
+        }
+
+        /* Оранжевая линия для невыполненных задач */
+        .pending::before {
+            background-color: #ff9800;
+        }
+
         tr:hover {
             background-color: #333;
-        }
-
-        /* Стили для выполненных задач */
-        .completed {
-            background-color: rgba(76, 175, 80, 0.05);
-        }
-
-        .completed:hover {
-            background-color: rgba(76, 175, 80, 0.1);
-        }
-
-        /* Стили для невыполненных задач */
-        .pending {
-            background-color: rgba(255, 152, 0, 0.05);
-        }
-
-        .pending:hover {
-            background-color: rgba(255, 152, 0, 0.1);
         }
 
         /* Линия разделения между выполненными и невыполненными задачами */
@@ -248,17 +254,17 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>A - номер<br>задачи</th>
-                            <th>B - Задача</th>
-                            <th>C - Последняя дата<br>выполнения задачи</th>
-                            <th>D - Прошло дней<br>с даты поставленной задачи</th>
-                            <th>E - Периодичность дней<br>выполнения задачи</th>
-                            <th>F - Остаток дней до<br>следующего цикла выполнения задачи</th>
-                            <th>G - Дата<br>след. цикла</th>
+                            <th>Номер<br>задачи</th>
+                            <th>Задача</th>
+                            <th>Последняя дата<br>выполнения задачи</th>
+                            <th>Прошло дней<br>с даты поставленной задачи</th>
+                            <th>Периодичность дней<br>выполнения задачи</th>
+                            <th>Остаток дней до<br>следующего цикла выполнения задачи</th>
+                            <th>Дата<br>след. цикла</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
+                        <tr class="pending">
                             <td>1</td>
                             <td>Проверить сервер</td>
                             <td>15.10.2023</td>
@@ -267,7 +273,7 @@
                             <td><span class="status warning">2</span></td>
                             <td>22.10.2023</td>
                         </tr>
-                        <tr>
+                        <tr class="pending">
                             <td>2</td>
                             <td>Обновить ПО</td>
                             <td>10.10.2023</td>
@@ -276,7 +282,7 @@
                             <td><span class="status success">20</span></td>
                             <td>09.11.2023</td>
                         </tr>
-                        <tr>
+                        <tr class="pending">
                             <td>3</td>
                             <td>Резервное копирование</td>
                             <td>18.10.2023</td>
@@ -285,7 +291,7 @@
                             <td><span class="status danger">1</span></td>
                             <td>21.10.2023</td>
                         </tr>
-                        <tr>
+                        <tr class="pending">
                             <td>4</td>
                             <td>Проверить безопасность</td>
                             <td>01.10.2023</td>
@@ -305,11 +311,11 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>A - Номер<br>задачи</th>
-                            <th>B - Задача</th>
-                            <th>C - Дата появления<br>задачи</th>
-                            <th>D - Дата<br>выполнения</th>
-                            <th>E - Выполнил</th>
+                            <th>Номер<br>задачи</th>
+                            <th>Задача</th>
+                            <th>Дата появления<br>задачи</th>
+                            <th>Дата<br>выполнения</th>
+                            <th>Выполнил</th>
                         </tr>
                     </thead>
                     <tbody>

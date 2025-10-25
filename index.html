@@ -435,12 +435,13 @@
 
     <script>
         // Конфигурация - ЗАМЕНИТЕ НА ВАШ URL GOOGLE APPS SCRIPT
-        const BACKEND_URL = 'https://script.google.com/macros/s/AKfycby-3mPi5PbQ-99t9F7MF0FIOi7aluUO6RXBpa6PVjFpEy73GxW44jpv9iCYWXPD44U9/exec';
+        const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbxm2rAby4h861YQNOBe_UJQBCzvQkAuOJa1MXeAlic2LCfHnRvBM5IhiQ2g6zY_iLR0/exec';
 
         // Функция для показа уведомлений
         function showNotification(message, type = 'success') {
             const notification = document.getElementById('notification');
             notification.textContent = message;
+        
             notification.className = `notification ${type}`;
             notification.classList.add('show');
             

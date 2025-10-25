@@ -1,346 +1,707 @@
-// Константы для работы с таблицами
-const CONFIG = {
-  SPREADSHEET_ID: '130GUmajAIeTtlb0tzpf_47ctTVaCrNfM3TSObj9jFWc'
-};
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
 
-/**
- * Обработчик всех запросов
- */
-function doGet(e) {
-  return handleRequest(e);
-}
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            padding: 15px;
+            line-height: 1.5;
+        }
 
-function doPost(e) {
-  return handleRequest(e);
-}
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
 
-function handleRequest(e) {
-  try {
-    const action = e.parameter.action;
-    
-    if (action === 'getTasks') {
-      return getTasks();
-    } else if (action === 'getJournal') {
-      return getJournal();
-    } else if (action === 'updateCell') {
-      const sheetName = e.parameter.sheetName;
-      const column = e.parameter.column;
-      const row = e.parameter.row;
-      const value = e.parameter.value;
-      return updateCell(sheetName, column, row, value);
-    } else if (action === 'test') {
-      return testConnection();
-    } else {
-      return ContentService.createTextOutput(JSON.stringify({success: false, error: 'Неизвестное действие'})).setMimeType(ContentService.MimeType.JSON);
-    }
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({success: false, error: error.toString()})).setMimeType(ContentService.MimeType.JSON);
-  }
-}
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #444;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
 
-/**
- * Находит листы автоматически
- */
-function findSheets() {
-  try {
-    const spreadsheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-    const sheets = spreadsheet.getSheets();
-    
-    let tasksSheet = null;
-    let journalSheet = null;
-    
-    // Ищем листы по содержимому заголовков
-    for (let sheet of sheets) {
-      const data = sheet.getDataRange().getValues();
-      if (data.length === 0) continue;
-      
-      const headers = data[0].map(h => h.toString().toLowerCase());
-      
-      // Проверяем заголовки для списка задач
-      if (headers.includes('номер задачи') && headers.includes('периодичность дней выполнения')) {
-        tasksSheet = sheet;
-      }
-      // Проверяем заголовки для журнала выполнения
-      else if (headers.includes('номер задачи') && headers.includes('выполнил')) {
-        journalSheet = sheet;
-      }
-    }
-    
-    // Если не нашли по заголовкам, берем по порядку
-    if (!tasksSheet && sheets.length > 0) {
-      tasksSheet = sheets[0];
-    }
-    if (!journalSheet && sheets.length > 1) {
-      journalSheet = sheets[1];
-    }
-    
-    return {
-      tasksSheet: tasksSheet,
-      journalSheet: journalSheet,
-      tasksSheetName: tasksSheet ? tasksSheet.getName() : null,
-      journalSheetName: journalSheet ? journalSheet.getName() : null
-    };
-  } catch (error) {
-    console.error('Ошибка при поиске листов:', error);
-    return { tasksSheet: null, journalSheet: null, tasksSheetName: null, journalSheetName: null };
-  }
-}
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #ccc;
+            padding: 10px 15px;
+            font-size: 14px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 140px;
+            text-align: center;
+        }
 
-/**
- * Получает список задач с расчетами
- */
-function getTasks() {
-  try {
-    const { tasksSheet } = findSheets();
-    
-    if (!tasksSheet) {
-      throw new Error('Лист с задачами не найден');
-    }
-    
-    const data = tasksSheet.getDataRange().getValues();
-    const headers = data[0];
-    const rows = data.slice(1);
-    
-    // Определяем индексы колонок по заголовкам
-    const colIndex = {
-      ID: headers.findIndex(h => h.toString().toLowerCase().includes('номер')),
-      TASK: headers.findIndex(h => h.toString().toLowerCase().includes('задача')),
-      LAST_DATE: headers.findIndex(h => h.toString().toLowerCase().includes('последняя') && h.toString().toLowerCase().includes('дата')),
-      FREQUENCY: headers.findIndex(h => h.toString().toLowerCase().includes('периодичность'))
-    };
-    
-    // Если не нашли колонки, используем стандартные индексы
-    if (colIndex.ID === -1) colIndex.ID = 0;
-    if (colIndex.TASK === -1) colIndex.TASK = 1;
-    if (colIndex.LAST_DATE === -1) colIndex.LAST_DATE = 2;
-    if (colIndex.FREQUENCY === -1) colIndex.FREQUENCY = 4;
-    
-    const tasks = rows.map(row => {
-      const today = new Date();
-      const lastDate = row[colIndex.LAST_DATE];
-      const frequency = parseFloat(row[colIndex.FREQUENCY]) || 0;
-      
-      let daysPassed = 0;
-      let daysLeft = 0;
-      let nextDate = '';
-      
-      if (lastDate instanceof Date && !isNaN(lastDate.getTime())) {
-        // Расчет прошедших дней
-        daysPassed = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+        .tab-btn:hover {
+            color: #fff;
+            background-color: #333;
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            border-bottom: 2px solid #fff;
+        }
+
+        .tab-content {
+            display: none;
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-top: 10px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background: #2a2a2a;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            min-width: 600px;
+            background: #2a2a2a;
+        }
+
+        th, td {
+            padding: 12px 10px;
+            text-align: center;
+            white-space: normal;
+            word-wrap: break-word;
+            line-height: 1.4;
+            position: relative;
+        }
+
+        /* Красивые разделители между колонками */
+        th:not(:last-child)::after,
+        td:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 15%;
+            height: 70%;
+            width: 1px;
+            background-color: #555;
+        }
+
+        th {
+            background-color: #333;
+            color: #fff;
+            font-weight: bold;
+            font-size: 12px;
+            border-bottom: 2px solid #555;
+            padding: 14px 10px;
+        }
+
+        th:first-child {
+            border-top-left-radius: 6px;
+        }
+
+        th:last-child {
+            border-top-right-radius: 6px;
+        }
+
+        td {
+            border-bottom: 1px solid #3a3a3a;
+            background: #2a2a2a;
+            transition: all 0.2s ease;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:last-child td:first-child {
+            border-bottom-left-radius: 6px;
+        }
+
+        tr:last-child td:last-child {
+            border-bottom-right-radius: 6px;
+        }
+
+        /* Контурные бейджи */
+        .status-outline {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 14px;
+            border-radius: 16px;
+            font-weight: bold;
+            font-size: 13px;
+            min-width: 45px;
+            background: transparent;
+            border: 2px solid;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .status-outline.warning { 
+            border-color: #ff9800; 
+            color: #ff9800; 
+        }
+        .status-outline.success { 
+            border-color: #4caf50; 
+            color: #4caf50; 
+        }
+        .status-outline.danger { 
+            border-color: #f44336; 
+            color: #f44336; 
+        }
+
+        .status-outline:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        /* Цветные линии только для журнала выполнения */
+        #tab1 tr {
+            position: relative;
+        }
+
+        #tab1 tr::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            border-radius: 2px 0 0 2px;
+        }
+
+        /* Зеленая линия для выполненных задач */
+        #tab1 .completed::before {
+            background-color: #4caf50;
+        }
+
+        /* Оранжевая линия для невыполненных задач */
+        #tab1 .pending::before {
+            background-color: #ff9800;
+        }
+
+        tr:hover td {
+            background: #333;
+        }
+
+        /* Линия разделения между выполненными и невыполненными задачами */
+        .divider-row {
+            height: 3px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                #666 20%, 
+                #666 80%, 
+                transparent 100%);
+        }
+
+        .divider-row td {
+            padding: 0;
+            border: none;
+            background: transparent;
+        }
+
+        select {
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 20px;
+            padding: 8px 12px;
+            width: 100%;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #4caf50;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+        }
+
+        select:hover {
+            border-color: #666;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: #fff;
+            font-size: 22px;
+            text-align: center;
+            font-weight: 600;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #ccc;
+            font-style: italic;
+        }
+
+        .error {
+            text-align: center;
+            padding: 20px;
+            color: #f44336;
+            background: #2a1a1a;
+            border-radius: 6px;
+            margin: 10px 0;
+            border: 1px solid #f44336;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background-color: #4caf50;
+            border: 1px solid #45a049;
+        }
+
+        .notification.error {
+            background-color: #f44336;
+            border: 1px solid #d32f2f;
+        }
+
+        /* Адаптация для мобильных устройств */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab-btn {
+                min-width: 100%;
+                margin-bottom: 5px;
+                border-radius: 6px;
+            }
+            
+            .tab-content {
+                padding: 10px;
+            }
+            
+            th, td {
+                padding: 10px 6px;
+                font-size: 12px;
+            }
+            
+            th {
+                font-size: 11px;
+                padding: 12px 6px;
+            }
+            
+            h2 {
+                font-size: 18px;
+            }
+            
+            table {
+                min-width: 500px;
+            }
+
+            .status-outline {
+                padding: 6px 10px;
+                font-size: 11px;
+                min-width: 40px;
+            }
+
+            .notification {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                transform: translateY(-100%);
+            }
+
+            .notification.show {
+                transform: translateY(0);
+            }
+            
+            /* Убираем цветные линии слева в мобильной версии */
+            #tab1 tr::before {
+                display: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            th, td {
+                padding: 8px 4px;
+                font-size: 11px;
+            }
+            
+            th {
+                font-size: 10px;
+            }
+            
+            .status-outline {
+                font-size: 10px;
+                padding: 5px 8px;
+                min-width: 35px;
+            }
+            
+            table {
+                min-width: 450px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="notification" id="notification"></div>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="tab1">ЖУРНАЛ ВЫПОЛНЕНИЯ</button>
+            <button class="tab-btn" data-tab="tab2">СПИСОК ЗАДАЧ</button>
+        </div>
         
-        // Расчет оставшихся дней
-        daysLeft = frequency - daysPassed;
+        <div class="tab-content active" id="tab1">
+            <h2>ЖУРНАЛ ВЫПОЛНЕНИЯ</h2>
+            <div class="table-container">
+                <table id="journal-table">
+                    <thead>
+                        <tr>
+                            <th>Номер<br>задачи</th>
+                            <th>Задача</th>
+                            <th>Дата появления<br>задачи</th>
+                            <th>Дата<br>выполнения</th>
+                            <th>Выполнил</th>
+                        </tr>
+                    </thead>
+                    <tbody id="journal-body">
+                        <tr>
+                            <td colspan="5" class="loading">Загрузка данных...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
         
-        // Расчет даты следующего выполнения
-        const nextDateObj = new Date(lastDate);
-        nextDateObj.setDate(nextDateObj.getDate() + frequency);
-        nextDate = Utilities.formatDate(nextDateObj, Session.getScriptTimeZone(), 'dd.MM.yyyy');
-      }
-      
-      return {
-        id: row[colIndex.ID],
-        task: row[colIndex.TASK],
-        lastDate: lastDate instanceof Date && !isNaN(lastDate.getTime()) ? 
-          Utilities.formatDate(lastDate, Session.getScriptTimeZone(), 'dd.MM.yyyy') : '',
-        daysPassed: daysPassed,
-        frequency: frequency,
-        daysLeft: daysLeft,
-        nextDate: nextDate
-      };
-    }).filter(task => task.id && task.task); // Фильтруем пустые строки
-    
-    return ContentService.createTextOutput(JSON.stringify(tasks)).setMimeType(ContentService.MimeType.JSON);
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({success: false, error: error.toString()})).setMimeType(ContentService.MimeType.JSON);
-  }
-}
+        <div class="tab-content" id="tab2">
+            <h2>СПИСОК ЗАДАЧ</h2>
+            <div class="table-container">
+                <table id="tasks-table">
+                    <thead>
+                        <tr>
+                            <th>Номер<br>задачи</th>
+                            <th>Задача</th>
+                            <th>Последняя дата<br>выполнения</th>
+                            <th>Прошло дней<br>с даты задачи</th>
+                            <th>Периодичность<br>дней выполнения</th>
+                            <th>Остаток дней до<br>следующего цикла</th>
+                            <th>Дата<br>след. цикла</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tasks-body">
+                        <tr>
+                            <td colspan="7" class="loading">Загрузка данных...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-/**
- * Получает журнал выполнения
- */
-function getJournal() {
-  try {
-    const { journalSheet } = findSheets();
-    
-    if (!journalSheet) {
-      throw new Error('Лист с журналом не найден');
-    }
-    
-    const data = journalSheet.getDataRange().getValues();
-    const headers = data[0];
-    const rows = data.slice(1);
-    
-    // Определяем индексы колонок по заголовкам
-    const colIndex = {
-      ID: headers.findIndex(h => h.toString().toLowerCase().includes('номер')),
-      TASK: headers.findIndex(h => h.toString().toLowerCase().includes('задача')),
-      CREATED_DATE: headers.findIndex(h => h.toString().toLowerCase().includes('появления') && h.toString().toLowerCase().includes('дата')),
-      COMPLETED_DATE: headers.findIndex(h => h.toString().toLowerCase().includes('выполнения') && h.toString().toLowerCase().includes('дата')),
-      EXECUTOR: headers.findIndex(h => h.toString().toLowerCase().includes('выполнил'))
-    };
-    
-    // Если не нашли колонки, используем стандартные индексы
-    if (colIndex.ID === -1) colIndex.ID = 0;
-    if (colIndex.TASK === -1) colIndex.TASK = 1;
-    if (colIndex.CREATED_DATE === -1) colIndex.CREATED_DATE = 2;
-    if (colIndex.COMPLETED_DATE === -1) colIndex.COMPLETED_DATE = 3;
-    if (colIndex.EXECUTOR === -1) colIndex.EXECUTOR = 4;
-    
-    const journal = rows.map((row, index) => {
-      const createdDate = row[colIndex.CREATED_DATE];
-      const completedDate = row[colIndex.COMPLETED_DATE];
-      const executor = row[colIndex.EXECUTOR];
-      
-      const isCompleted = completedDate instanceof Date && !isNaN(completedDate.getTime());
-      
-      return {
-        id: row[colIndex.ID],
-        task: row[colIndex.TASK],
-        createdDate: createdDate instanceof Date && !isNaN(createdDate.getTime()) ? 
-          Utilities.formatDate(createdDate, Session.getScriptTimeZone(), 'dd.MM.yyyy') : '',
-        completedDate: isCompleted ? 
-          Utilities.formatDate(completedDate, Session.getScriptTimeZone(), 'dd.MM.yyyy') : '',
-        executor: executor || '',
-        isCompleted: isCompleted,
-        rowIndex: index + 2 // +2 потому что первая строка - заголовок, и индексы начинаются с 0
-      };
-    }).filter(item => item.id && item.task); // Фильтруем пустые строки
-    
-    // Сортируем: сначала невыполненные, потом выполненные
-    const pending = journal.filter(item => !item.isCompleted);
-    const completed = journal.filter(item => item.isCompleted);
-    
-    const sortedJournal = [...pending, ...completed];
-    return ContentService.createTextOutput(JSON.stringify(sortedJournal)).setMimeType(ContentService.MimeType.JSON);
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({success: false, error: error.toString()})).setMimeType(ContentService.MimeType.JSON);
-  }
-}
+    <script>
+        // Конфигурация - ЗАМЕНИТЕ НА ВАШ URL GOOGLE APPS SCRIPT
+        const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbxm2rAby4h861YQNOBe_UJQBCzvQkAuOJa1MXeAlic2LCfHnRvBM5IhiQ2g6zY_iLR0/exec';
 
-/**
- * Обновление ячейки
- */
-function updateCell(sheetName, column, row, value) {
-  try {
-    const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-    let sheet;
-    
-    // Если sheetName = 'B' или '2', ищем журнал выполнения
-    if (sheetName === 'B' || sheetName === '2') {
-      const { journalSheet } = findSheets();
-      sheet = journalSheet;
-    } 
-    // Если sheetName = 'A' или '1', ищем список задач
-    else if (sheetName === 'A' || sheetName === '1') {
-      const { tasksSheet } = findSheets();
-      sheet = tasksSheet;
-    }
-    // Иначе ищем по имени
-    else {
-      sheet = ss.getSheetByName(sheetName);
-    }
-    
-    if (!sheet) {
-      return ContentService.createTextOutput(JSON.stringify({success: false, error: 'Лист не найден'})).setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    const range = sheet.getRange(column + row);
-    range.setValue(value);
-    
-    // Если обновляем журнал выполнения в колонке E (исполнитель), 
-    // то автоматически устанавливаем текущую дату в колонку D
-    if ((sheetName === 'B' || sheetName === '2') && column === 'E' && value) {
-      const dateRange = sheet.getRange('D' + row);
-      dateRange.setValue(new Date());
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify({success: true})).setMimeType(ContentService.MimeType.JSON);
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({success: false, error: error.toString()})).setMimeType(ContentService.MimeType.JSON);
-  }
-}
+        // Переменные для хранения данных и отслеживания состояния загрузки
+        let isInitialLoad = true;
+        let tasksData = null;
+        let journalData = null;
 
-/**
- * Тестовая функция для проверки подключения
- */
-function testConnection() {
-  try {
-    const spreadsheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-    const sheets = spreadsheet.getSheets();
-    const sheetNames = sheets.map(sheet => sheet.getName());
-    
-    const foundSheets = findSheets();
-    
-    return ContentService.createTextOutput(JSON.stringify({
-      success: true,
-      message: 'Подключение успешно',
-      allSheets: sheetNames,
-      tasksSheet: foundSheets.tasksSheetName,
-      journalSheet: foundSheets.journalSheetName,
-      tasksFound: !!foundSheets.tasksSheet,
-      journalFound: !!foundSheets.journalSheet,
-      spreadsheetUrl: spreadsheet.getUrl()
-    })).setMimeType(ContentService.MimeType.JSON);
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false,
-      error: error.message
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-}
+        // Функция для показа уведомлений
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+        
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
 
-/**
- * Функция для отладки - показывает все доступные листы
- */
-function debugSheets() {
-  try {
-    const spreadsheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-    const sheets = spreadsheet.getSheets();
-    const sheetNames = sheets.map(sheet => sheet.getName());
-    
-    console.log('Доступные листы:', sheetNames);
-    
-    const foundSheets = findSheets();
-    
-    console.log('Найденные листы:');
-    console.log('- Задачи:', foundSheets.tasksSheetName);
-    console.log('- Журнал:', foundSheets.journalSheetName);
-    
-    if (foundSheets.tasksSheet) {
-      const tasksData = foundSheets.tasksSheet.getDataRange().getValues();
-      console.log('Данные листа задач:', tasksData);
-    }
-    
-    if (foundSheets.journalSheet) {
-      const journalData = foundSheets.journalSheet.getDataRange().getValues();
-      console.log('Данные листа журнала:', journalData);
-    }
-    
-    return {
-      allSheets: sheetNames,
-      foundSheets: foundSheets
-    };
-  } catch (error) {
-    console.error('Ошибка при отладке:', error);
-    return error.toString();
-  }
-}
+        // Функция для запросов с обработкой CORS
+        async function makeRequest(url, options = {}) {
+            try {
+                // Для GET запросов добавляем timestamp чтобы избежать кеширования
+                if (!options.method || options.method === 'GET') {
+                    const separator = url.includes('?') ? '&' : '?';
+                    url = `${url}${separator}_=${Date.now()}`;
+                }
+                
+                const response = await fetch(url, options);
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Ошибка запроса:', error);
+                throw error;
+            }
+        }
 
-/**
- * Простая функция для тестирования
- */
-function testFunction() {
-  return {
-    status: 'ok',
-    message: 'Сервер работает',
-    timestamp: new Date().toISOString()
-  };
-}
+        // Функции API
+        async function loadTasks() {
+            try {
+                // Если данные уже загружены и это не первая загрузка, не перезагружаем
+                if (tasksData && !isInitialLoad) {
+                    renderTasksTable(tasksData);
+                    return;
+                }
+                
+                const tasksBody = document.getElementById('tasks-body');
+                tasksBody.innerHTML = '<tr><td colspan="7" class="loading">Загрузка данных...</td></tr>';
+                
+                const tasks = await makeRequest(`${BACKEND_URL}?action=getTasks`);
+                tasksData = tasks;
+                renderTasksTable(tasks);
+                
+            } catch (error) {
+                console.error('Ошибка загрузки задач:', error);
+                const tasksBody = document.getElementById('tasks-body');
+                tasksBody.innerHTML = `<tr><td colspan="7" class="error">Ошибка загрузки: ${error.message}</td></tr>`;
+                showNotification('Ошибка загрузки задач', 'error');
+            }
+        }
 
-/**
- * Получить URL веб-приложения
- */
-function getWebAppUrl() {
-  const scriptId = ScriptApp.getScriptId();
-  return `https://script.google.com/macros/s/${scriptId}/exec`;
-}
+        async function loadJournal() {
+            try {
+                // Если данные уже загружены и это не первая загрузка, не перезагружаем
+                if (journalData && !isInitialLoad) {
+                    renderJournalTable(journalData);
+                    return;
+                }
+                
+                const journalBody = document.getElementById('journal-body');
+                journalBody.innerHTML = '<tr><td colspan="5" class="loading">Загрузка данных...</td></tr>';
+                
+                const journal = await makeRequest(`${BACKEND_URL}?action=getJournal`);
+                journalData = journal;
+                renderJournalTable(journal);
+                
+            } catch (error) {
+                console.error('Ошибка загрузки журнала:', error);
+                const journalBody = document.getElementById('journal-body');
+                journalBody.innerHTML = `<tr><td colspan="5" class="error">Ошибка загрузки: ${error.message}</td></tr>`;
+                showNotification('Ошибка загрузки журнала', 'error');
+            }
+        }
+
+        async function completeTask(taskId, executor, rowIndex) {
+            try {
+                // Формируем URL для записи в колонку E (индекс 4) в листе B
+                const updateUrl = `${BACKEND_URL}?action=updateCell&sheetName=B&column=E&row=${rowIndex}&value=${encodeURIComponent(executor)}`;
+                
+                const result = await makeRequest(updateUrl);
+                
+                if (result.success) {
+                    showNotification('Имя исполнителя успешно записано в таблицу!');
+                    // Обновляем локальные данные и перезагружаем журнал
+                    journalData = null;
+                    loadJournal();
+                } else {
+                    showNotification('Ошибка: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка записи имени:', error);
+                showNotification('Ошибка записи имени: ' + error.message, 'error');
+            }
+        }
+
+        function renderTasksTable(tasks) {
+            const tasksBody = document.getElementById('tasks-body');
+            
+            if (!tasks || tasks.length === 0) {
+                tasksBody.innerHTML = '<tr><td colspan="7" class="loading">Нет задач</td></tr>';
+                return;
+            }
+            
+            tasksBody.innerHTML = tasks.map(task => {
+                // Определяем стиль для статуса
+                let statusClass = 'success';
+                if (task.daysLeft <= 0) {
+                    statusClass = 'danger';
+                } else if (task.daysLeft <= 2) {
+                    statusClass = 'warning';
+                }
+                
+                return `
+                    <tr>
+                        <td>${task.id}</td>
+                        <td>${task.task}</td>
+                        <td>${task.lastDate || '-'}</td>
+                        <td>${task.daysPassed}</td>
+                        <td>${task.frequency}</td>
+                        <td><span class="status-outline ${statusClass}">${task.daysLeft}</span></td>
+                        <td>${task.nextDate || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderJournalTable(journal) {
+            const journalBody = document.getElementById('journal-body');
+            
+            if (!journal || journal.length === 0) {
+                journalBody.innerHTML = '<tr><td colspan="5" class="loading">Нет данных</td></tr>';
+                return;
+            }
+            
+            // Разделяем выполненные и невыполненные задачи
+            const pendingTasks = journal.filter(item => !item.isCompleted);
+            const completedTasks = journal.filter(item => item.isCompleted);
+            
+            let html = '';
+            
+            // Невыполненные задачи (вверху)
+            pendingTasks.forEach((task, index) => {
+                // Для невыполненных задач используем rowIndex из данных
+                const rowIndex = task.rowIndex || (index + 2); // +2 потому что в Google Sheets первая строка - заголовки
+                html += `
+                    <tr class="pending">
+                        <td>${task.id}</td>
+                        <td>${task.task}</td>
+                        <td>${task.createdDate}</td>
+                        <td>${task.completedDate}</td>
+                        <td>
+                            <select onchange="handleExecutorChange(this, ${task.id}, ${rowIndex})">
+                                <option value="">-- Выберите --</option>
+                                <option value="Вадим">Вадим</option>
+                                <option value="Иван">Иван</option>
+                                <option value="Мария">Мария</option>
+                                <option value="Алексей">Алексей</option>
+                            </select>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            // Добавляем разделитель если есть обе категории
+            if (pendingTasks.length > 0 && completedTasks.length > 0) {
+                html += '<tr class="divider-row"><td colspan="5"></td></tr>';
+            }
+            
+            // Выполненные задачи (внизу)
+            completedTasks.forEach(task => {
+                html += `
+                    <tr class="completed">
+                        <td>${task.id}</td>
+                        <td>${task.task}</td>
+                        <td>${task.createdDate}</td>
+                        <td>${task.completedDate}</td>
+                        <td>${task.executor}</td>
+                    </tr>
+                `;
+            });
+            
+            journalBody.innerHTML = html;
+        }
+
+        function handleExecutorChange(select, taskId, rowIndex) {
+            if (select.value) {
+                completeTask(taskId, select.value, rowIndex);
+                // Блокируем select до завершения операции
+                select.disabled = true;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            // Загрузка данных при открытии страницы
+            loadJournal();
+            loadTasks();
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Убираем активный класс у всех кнопок и контента
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // Добавляем активный класс к нажатой кнопке
+                    button.classList.add('active');
+                    
+                    // Показываем соответствующий контент
+                    const tabId = button.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                    
+                    // Перезагружаем данные при переключении вкладок только если нужно
+                    if (tabId === 'tab2') {
+                        loadTasks();
+                    } else if (tabId === 'tab1') {
+                        loadJournal();
+                    }
+                });
+            });
+
+            // Автоматическое обновление данных каждые 30 секунд
+            setInterval(() => {
+                const activeTab = document.querySelector('.tab-content.active');
+                if (activeTab.id === 'tab2') {
+                    loadTasks();
+                } else if (activeTab.id === 'tab1') {
+                    loadJournal();
+                }
+            }, 30000);
+
+            // Отмечаем, что первоначальная загрузка завершена
+            setTimeout(() => {
+                isInitialLoad = false;
+            }, 1000);
+        });
+
+        // Функция для тестирования подключения
+        async function testConnection() {
+            try {
+                const result = await makeRequest(`${BACKEND_URL}?action=test`);
+                if (result.success) {
+                    showNotification('Подключение к серверу успешно!', 'success');
+                } else {
+                    showNotification('Ошибка подключения: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Ошибка подключения к серверу', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -299,6 +299,90 @@
             border: 1px solid #d32f2f;
         }
 
+        /* Анимация загрузки на мыльном фоне */
+        .soap-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+            border-radius: 8px;
+            margin: 10px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .soap-loading::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1) 0%, transparent 20%),
+                radial-gradient(circle at 80% 70%, rgba(255,255,255,0.1) 0%, transparent 20%),
+                radial-gradient(circle at 40% 80%, rgba(255,255,255,0.1) 0%, transparent 20%);
+            z-index: 1;
+        }
+
+        .soap-bubble {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%);
+            box-shadow: 
+                inset 0 0 20px rgba(255,255,255,0.2),
+                0 0 30px rgba(255,255,255,0.1);
+            position: relative;
+            z-index: 2;
+            animation: float 2s ease-in-out infinite;
+        }
+
+        .soap-bubble::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 15px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+        }
+
+        .soap-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: 15px;
+            right: 10px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) scale(1);
+                box-shadow: 
+                    inset 0 0 20px rgba(255,255,255,0.2),
+                    0 0 30px rgba(255,255,255,0.1);
+            }
+            50% {
+                transform: translateY(-10px) scale(1.05);
+                box-shadow: 
+                    inset 0 0 20px rgba(255,255,255,0.3),
+                    0 0 40px rgba(255,255,255,0.15);
+            }
+        }
+
+        .loading-text {
+            margin-left: 15px;
+            color: #ccc;
+            font-size: 16px;
+            z-index: 2;
+        }
+
         /* Адаптация для мобильных устройств */
         @media (max-width: 768px) {
             body {
@@ -358,6 +442,19 @@
             #tab1 tr::before {
                 display: none;
             }
+
+            .soap-loading {
+                padding: 30px 15px;
+            }
+
+            .soap-bubble {
+                width: 40px;
+                height: 40px;
+            }
+
+            .loading-text {
+                font-size: 14px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -378,6 +475,20 @@
             
             table {
                 min-width: 450px;
+            }
+
+            .soap-loading {
+                padding: 20px 10px;
+            }
+
+            .soap-bubble {
+                width: 30px;
+                height: 30px;
+            }
+
+            .loading-text {
+                font-size: 12px;
+                margin-left: 10px;
             }
         }
     </style>
@@ -406,7 +517,12 @@
                     </thead>
                     <tbody id="journal-body">
                         <tr>
-                            <td colspan="5" class="loading">Загрузка данных...</td>
+                            <td colspan="5">
+                                <div class="soap-loading">
+                                    <div class="soap-bubble"></div>
+                                    <div class="loading-text">Загрузка данных...</div>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -430,7 +546,12 @@
                     </thead>
                     <tbody id="tasks-body">
                         <tr>
-                            <td colspan="7" class="loading">Загрузка данных...</td>
+                            <td colspan="7">
+                                <div class="soap-loading">
+                                    <div class="soap-bubble"></div>
+                                    <div class="loading-text">Загрузка данных...</div>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -488,7 +609,16 @@
                 }
                 
                 const tasksBody = document.getElementById('tasks-body');
-                tasksBody.innerHTML = '<tr><td colspan="7" class="loading">Загрузка данных...</td></tr>';
+                tasksBody.innerHTML = `
+                    <tr>
+                        <td colspan="7">
+                            <div class="soap-loading">
+                                <div class="soap-bubble"></div>
+                                <div class="loading-text">Загрузка данных...</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
                 
                 const tasks = await makeRequest(`${BACKEND_URL}?action=getTasks`);
                 tasksData = tasks;
@@ -511,7 +641,16 @@
                 }
                 
                 const journalBody = document.getElementById('journal-body');
-                journalBody.innerHTML = '<tr><td colspan="5" class="loading">Загрузка данных...</td></tr>';
+                journalBody.innerHTML = `
+                    <tr>
+                        <td colspan="5">
+                            <div class="soap-loading">
+                                <div class="soap-bubble"></div>
+                                <div class="loading-text">Загрузка данных...</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
                 
                 const journal = await makeRequest(`${BACKEND_URL}?action=getJournal`);
                 journalData = journal;
@@ -533,7 +672,6 @@
                 const result = await makeRequest(updateUrl);
                 
                 if (result.success) {
-                    showNotification('Имя исполнителя успешно записано в таблицу!');
                     // Обновляем локальные данные и перезагружаем журнал
                     journalData = null;
                     loadJournal();
@@ -550,7 +688,16 @@
             const tasksBody = document.getElementById('tasks-body');
             
             if (!tasks || tasks.length === 0) {
-                tasksBody.innerHTML = '<tr><td colspan="7" class="loading">Нет задач</td></tr>';
+                tasksBody.innerHTML = `
+                    <tr>
+                        <td colspan="7">
+                            <div class="soap-loading">
+                                <div class="soap-bubble"></div>
+                                <div class="loading-text">Нет задач</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
                 return;
             }
             
@@ -581,7 +728,16 @@
             const journalBody = document.getElementById('journal-body');
             
             if (!journal || journal.length === 0) {
-                journalBody.innerHTML = '<tr><td colspan="5" class="loading">Нет данных</td></tr>';
+                journalBody.innerHTML = `
+                    <tr>
+                        <td colspan="5">
+                            <div class="soap-loading">
+                                <div class="soap-bubble"></div>
+                                <div class="loading-text">Нет данных</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
                 return;
             }
             
@@ -637,9 +793,19 @@
 
         function handleExecutorChange(select, taskId, rowIndex) {
             if (select.value) {
+                // Показываем анимацию загрузки
+                const row = select.closest('tr');
+                const originalHTML = row.innerHTML;
+                row.innerHTML = `
+                    <td colspan="5">
+                        <div class="soap-loading">
+                            <div class="soap-bubble"></div>
+                            <div class="loading-text">Сохранение данных...</div>
+                        </div>
+                    </td>
+                `;
+                
                 completeTask(taskId, select.value, rowIndex);
-                // Блокируем select до завершения операции
-                select.disabled = true;
             }
         }
 

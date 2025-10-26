@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Task Manager</title>
     <style>
         * {
@@ -749,6 +749,12 @@
             input[type="date"] {
                 max-width: 100%;
                 box-sizing: border-box;
+                font-size: 16px; /* Предотвращает зум в iOS */
+            }
+
+            /* Предотвращение зума при фокусе на формы ввода */
+            input, select, textarea {
+                font-size: 16px;
             }
 
             .upload-options {

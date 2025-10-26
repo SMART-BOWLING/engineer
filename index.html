@@ -745,6 +745,12 @@
                 min-width: 100%;
             }
 
+            /* Исправление для поля ввода даты в мобильной версии */
+            input[type="date"] {
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
             .upload-options {
                 flex-direction: column;
             }
@@ -889,14 +895,10 @@
                     <div class="upload-title">Добавить изображение к задаче</div>
                     
                     <input type="file" id="image-upload" class="file-input" accept="image/*">
-                    <input type="file" id="camera-upload" class="file-input" accept="image/*" capture="environment">
                     
                     <div class="upload-options">
                         <button class="upload-option-btn" id="gallery-btn">
                             <span>📁</span> Выбрать из галереи
-                        </button>
-                        <button class="upload-option-btn" id="camera-btn">
-                            <span>📷</span> Сделать фото
                         </button>
                     </div>
                     
@@ -979,8 +981,6 @@
         function openImageSource(sourceType) {
             if (sourceType === 'gallery') {
                 document.getElementById('image-upload').click();
-            } else if (sourceType === 'camera') {
-                document.getElementById('camera-upload').click();
             }
         }
 
@@ -1041,7 +1041,6 @@
             selectedImageFile = null;
             document.getElementById('image-preview').style.display = 'none';
             document.getElementById('image-upload').value = '';
-            document.getElementById('camera-upload').value = '';
         }
 
         async function uploadImageToDrive() {
@@ -1405,12 +1404,7 @@
                 openImageSource('gallery');
             });
 
-            document.getElementById('camera-btn').addEventListener('click', function() {
-                openImageSource('camera');
-            });
-
             document.getElementById('image-upload').addEventListener('change', handleImageUpload);
-            document.getElementById('camera-upload').addEventListener('change', handleImageUpload);
 
             document.getElementById('closeModal').addEventListener('click', closeImageModal);
 

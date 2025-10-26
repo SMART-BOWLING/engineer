@@ -174,6 +174,94 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
 
+        /* Стили для изображений */
+        .task-image {
+            max-width: 80px;
+            max-height: 60px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            border: 1px solid #555;
+        }
+
+        .task-image:hover {
+            transform: scale(1.8);
+            z-index: 10;
+            position: relative;
+        }
+
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .image-modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .upload-container {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px dashed #555;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .upload-btn {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+
+        .upload-btn:hover {
+            background-color: #45a049;
+        }
+
+        .camera-preview {
+            width: 100%;
+            max-width: 300px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            margin: 10px auto;
+            display: none;
+        }
+
+        .capture-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            display: none;
+        }
+
         /* Цветные линии только для журнала выполнения */
         #tab1 tr {
             position: relative;
@@ -538,6 +626,11 @@
             .form-group {
                 min-width: 100%;
             }
+
+            .task-image {
+                max-width: 60px;
+                max-height: 45px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -577,11 +670,22 @@
             .add-task-form {
                 padding: 15px;
             }
+
+            .task-image {
+                max-width: 50px;
+                max-height: 35px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="notification" id="notification"></div>
+    
+    <!-- Модальное окно для просмотра изображения -->
+    <div class="image-modal" id="imageModal">
+        <span class="close-modal" id="closeModal">&times;</span>
+        <img class="image-modal-content" id="modalImage">
+    </div>
 
     <div class="container">
         <div class="tabs">
@@ -595,7 +699,7 @@
                 <table id="journal-table">
                     <thead>
                         <tr>
-                            <th>Номер<br>задачи</th>
+                            <th>Изображение</th>
                             <th>Задача</th>
                             <th>Дата появления<br>задачи</th>
                             <th>Дата<br>выполнения</th>
@@ -624,10 +728,6 @@
                 <div class="form-title">Добавить новую задачу</div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="task-number">Номер задачи</label>
-                        <input type="number" id="task-number" placeholder="Введите номер задачи">
-                    </div>
-                    <div class="form-group">
                         <label for="task-name">Название задачи</label>
                         <input type="text" id="task-name" placeholder="Введите название задачи">
                     </div>
@@ -640,6 +740,20 @@
                         <input type="number" id="frequency" placeholder="Дни выполнения" min="1">
                     </div>
                 </div>
+                
+                <!-- Блок загрузки изображения -->
+                <div class="upload-container">
+                    <div class="form-title">Добавить изображение к задаче</div>
+                    <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                    <button class="upload-btn" id="upload-from-gallery">Загрузить из галереи</button>
+                    <button class="upload-btn" id="take-photo">Сделать фото</button>
+                    
+                    <video id="camera-preview" class="camera-preview" autoplay playsinline></video>
+                    <button class="capture-btn" id="capture-photo">Сделать снимок</button>
+                    
+                    <div id="image-preview" style="margin-top: 10px;"></div>
+                </div>
+                
                 <button class="add-task-btn" id="add-task-btn">Добавить задачу</button>
             </div>
 
@@ -647,7 +761,7 @@
                 <table id="tasks-table">
                     <thead>
                         <tr>
-                            <th>Номер<br>задачи</th>
+                            <th>Изображение</th>
                             <th>Задача</th>
                             <th>Последняя дата<br>выполнения</th>
                             <th>Прошло дней<br>с даты задачи</th>
@@ -679,6 +793,8 @@
         let isInitialLoad = true;
         let tasksData = null;
         let journalData = null;
+        let selectedImageFile = null;
+        let cameraStream = null;
 
         // Функция для показа уведомлений
         function showNotification(message, type = 'success') {
@@ -711,10 +827,107 @@
             }
         }
 
+        // Функции для работы с изображениями
+        function openImageModal(imageUrl) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modalImg.src = imageUrl;
+            modal.style.display = 'flex';
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            modal.style.display = 'none';
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedImageFile = file;
+                previewImage(file);
+            }
+        }
+
+        function previewImage(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('image-preview');
+                preview.innerHTML = `<img src="${e.target.result}" style="max-width: 200px; max-height: 150px; border-radius: 4px;">`;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function takePhoto() {
+            try {
+                const preview = document.getElementById('camera-preview');
+                const captureBtn = document.getElementById('capture-photo');
+                
+                cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                
+                preview.srcObject = cameraStream;
+                preview.style.display = 'block';
+                captureBtn.style.display = 'inline-block';
+                
+            } catch (error) {
+                console.error('Ошибка доступа к камере:', error);
+                showNotification('Не удалось получить доступ к камере', 'error');
+            }
+        }
+
+        function capturePhoto() {
+            const preview = document.getElementById('camera-preview');
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.width = preview.videoWidth;
+            canvas.height = preview.videoHeight;
+            context.drawImage(preview, 0, 0, canvas.width, canvas.height);
+            
+            canvas.toBlob(function(blob) {
+                selectedImageFile = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
+                previewImage(selectedImageFile);
+                
+                // Останавливаем камеру
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(track => track.stop());
+                    cameraStream = null;
+                }
+                
+                document.getElementById('camera-preview').style.display = 'none';
+                document.getElementById('capture-photo').style.display = 'none';
+            }, 'image/jpeg', 0.8);
+        }
+
+        async function uploadImageToDrive() {
+            if (!selectedImageFile) return null;
+            
+            try {
+                const formData = new FormData();
+                formData.append('image', selectedImageFile);
+                
+                const response = await fetch(`${BACKEND_URL}?action=uploadImage`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    return result.imageUrl;
+                } else {
+                    throw new Error(result.error || 'Ошибка загрузки изображения');
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки изображения:', error);
+                showNotification('Ошибка загрузки изображения', 'error');
+                return null;
+            }
+        }
+
         // Функции API
         async function loadTasks() {
             try {
-                // Если данные уже загружены и это не первая загрузка, не перезагружаем
                 if (tasksData && !isInitialLoad) {
                     renderTasksTable(tasksData);
                     return;
@@ -746,7 +959,6 @@
 
         async function loadJournal() {
             try {
-                // Если данные уже загружены и это не первая загрузка, не перезагружаем
                 if (journalData && !isInitialLoad) {
                     renderJournalTable(journalData);
                     return;
@@ -778,13 +990,11 @@
 
         async function completeTask(taskId, executor, rowIndex) {
             try {
-                // Формируем URL для записи в колонку E (индекс 4) в листе B
                 const updateUrl = `${BACKEND_URL}?action=updateCell&sheetName=B&column=E&row=${rowIndex}&value=${encodeURIComponent(executor)}`;
                 
                 const result = await makeRequest(updateUrl);
                 
                 if (result.success) {
-                    // Обновляем локальные данные и перезагружаем журнал
                     journalData = null;
                     loadJournal();
                 } else {
@@ -799,7 +1009,18 @@
         // Функция для добавления новой задачи
         async function addNewTask(taskData) {
             try {
+                // Сначала загружаем изображение, если есть
+                let imageUrl = null;
+                if (selectedImageFile) {
+                    imageUrl = await uploadImageToDrive();
+                }
+
                 const addTaskUrl = `${BACKEND_URL}?action=addTask`;
+                
+                // Добавляем URL изображения в данные задачи
+                if (imageUrl) {
+                    taskData.imageUrl = imageUrl;
+                }
                 
                 const result = await makeRequest(addTaskUrl, {
                     method: 'POST',
@@ -812,10 +1033,11 @@
                 if (result.success) {
                     showNotification('Задача успешно добавлена!', 'success');
                     // Очищаем форму
-                    document.getElementById('task-number').value = '';
                     document.getElementById('task-name').value = '';
                     document.getElementById('last-date').value = '';
                     document.getElementById('frequency').value = '';
+                    document.getElementById('image-preview').innerHTML = '';
+                    selectedImageFile = null;
                     // Обновляем данные
                     tasksData = null;
                     loadTasks();
@@ -854,9 +1076,14 @@
                     statusClass = 'warning';
                 }
                 
+                // Отображаем изображение в первой колонке
+                const imageCell = task.imageUrl 
+                    ? `<td><img src="${task.imageUrl}" class="task-image" onclick="openImageModal('${task.imageUrl}')" alt="Изображение задачи"></td>`
+                    : '<td>-</td>';
+                
                 return `
                     <tr>
-                        <td>${task.id}</td>
+                        ${imageCell}
                         <td>${task.task}</td>
                         <td>${task.lastDate || '-'}</td>
                         <td>${task.daysPassed}</td>
@@ -893,11 +1120,16 @@
             
             // Невыполненные задачи (вверху)
             pendingTasks.forEach((task, index) => {
-                // Для невыполненных задач используем rowIndex из данных
-                const rowIndex = task.rowIndex || (index + 2); // +2 потому что в Google Sheets первая строка - заголовки
+                const rowIndex = task.rowIndex || (index + 2);
+                
+                // Отображаем изображение в первой колонке
+                const imageCell = task.imageUrl 
+                    ? `<td><img src="${task.imageUrl}" class="task-image" onclick="openImageModal('${task.imageUrl}')" alt="Изображение задачи"></td>`
+                    : '<td>-</td>';
+                
                 html += `
                     <tr class="pending">
-                        <td>${task.id}</td>
+                        ${imageCell}
                         <td>${task.task}</td>
                         <td>${task.createdDate}</td>
                         <td>${task.completedDate}</td>
@@ -921,9 +1153,14 @@
             
             // Выполненные задачи (внизу)
             completedTasks.forEach(task => {
+                // Отображаем изображение в первой колонке
+                const imageCell = task.imageUrl 
+                    ? `<td><img src="${task.imageUrl}" class="task-image" onclick="openImageModal('${task.imageUrl}')" alt="Изображение задачи"></td>`
+                    : '<td>-</td>';
+                
                 html += `
                     <tr class="completed">
-                        <td>${task.id}</td>
+                        ${imageCell}
                         <td>${task.task}</td>
                         <td>${task.createdDate}</td>
                         <td>${task.completedDate}</td>
@@ -937,7 +1174,6 @@
 
         function handleExecutorChange(select, taskId, rowIndex) {
             if (select.value) {
-                // Показываем анимацию загрузки
                 const row = select.closest('tr');
                 const originalHTML = row.innerHTML;
                 row.innerHTML = `
@@ -955,17 +1191,11 @@
 
         // Функция для обработки добавления новой задачи
         function handleAddTask() {
-            const taskNumber = document.getElementById('task-number').value.trim();
             const taskName = document.getElementById('task-name').value.trim();
             const lastDate = document.getElementById('last-date').value;
             const frequency = document.getElementById('frequency').value.trim();
 
             // Валидация
-            if (!taskNumber) {
-                showNotification('Введите номер задачи', 'error');
-                return;
-            }
-
             if (!taskName) {
                 showNotification('Введите название задачи', 'error');
                 return;
@@ -978,9 +1208,8 @@
 
             // Формируем данные для отправки
             const taskData = {
-                taskNumber: taskNumber,
                 taskName: taskName,
-                lastDate: lastDate || new Date().toISOString().split('T')[0], // Если дата не указана, используем сегодняшнюю
+                lastDate: lastDate || new Date().toISOString().split('T')[0],
                 frequency: frequency
             };
 
@@ -1007,18 +1236,14 @@
             
             tabButtons.forEach(button => {
                 button.addEventListener('click', () => {
-                    // Убираем активный класс у всех кнопок и контента
                     tabButtons.forEach(btn => btn.classList.remove('active'));
                     tabContents.forEach(content => content.classList.remove('active'));
                     
-                    // Добавляем активный класс к нажатой кнопке
                     button.classList.add('active');
                     
-                    // Показываем соответствующий контент
                     const tabId = button.getAttribute('data-tab');
                     document.getElementById(tabId).classList.add('active');
                     
-                    // Перезагружаем данные при переключении вкладок только если нужно
                     if (tabId === 'tab2') {
                         loadTasks();
                     } else if (tabId === 'tab1') {
@@ -1027,11 +1252,30 @@
                 });
             });
 
+            // Обработчики для работы с изображениями
+            document.getElementById('upload-from-gallery').addEventListener('click', function() {
+                document.getElementById('image-upload').click();
+            });
+
+            document.getElementById('image-upload').addEventListener('change', handleImageUpload);
+
+            document.getElementById('take-photo').addEventListener('click', takePhoto);
+
+            document.getElementById('capture-photo').addEventListener('click', capturePhoto);
+
+            document.getElementById('closeModal').addEventListener('click', closeImageModal);
+
+            document.getElementById('imageModal').addEventListener('click', function(event) {
+                if (event.target === this) {
+                    closeImageModal();
+                }
+            });
+
             // Обработчик для кнопки добавления задачи
             document.getElementById('add-task-btn').addEventListener('click', handleAddTask);
 
             // Обработчики для формы (добавление по Enter)
-            const formInputs = document.querySelectorAll('#task-number, #task-name, #last-date, #frequency');
+            const formInputs = document.querySelectorAll('#task-name, #last-date, #frequency');
             formInputs.forEach(input => {
                 input.addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') {

@@ -242,23 +242,7 @@
             background-color: #45a049;
         }
 
-        .camera-preview {
-            width: 100%;
-            max-width: 300px;
-            border: 1px solid #555;
-            border-radius: 4px;
-            margin: 10px auto;
-            display: none;
-        }
-
-        .capture-btn {
-            background-color: #2196F3;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 5px;
+        .file-input {
             display: none;
         }
 
@@ -744,12 +728,9 @@
                 <!-- Блок загрузки изображения -->
                 <div class="upload-container">
                     <div class="form-title">Добавить изображение к задаче</div>
-                    <input type="file" id="image-upload" accept="image/*" style="display: none;">
-                    <button class="upload-btn" id="upload-from-gallery">Загрузить из галереи</button>
-                    <button class="upload-btn" id="take-photo">Сделать фото</button>
                     
-                    <video id="camera-preview" class="camera-preview" autoplay playsinline></video>
-                    <button class="capture-btn" id="capture-photo">Сделать снимок</button>
+                    <input type="file" id="image-upload" class="file-input" accept="image/*" capture="environment">
+                    <button class="upload-btn" id="select-file-btn">Выбрать файл</button>
                     
                     <div id="image-preview" style="margin-top: 10px;"></div>
                 </div>
@@ -794,7 +775,6 @@
         let tasksData = null;
         let journalData = null;
         let selectedImageFile = null;
-        let cameraStream = null;
 
         // Функция для показа уведомлений
         function showNotification(message, type = 'success') {
@@ -852,52 +832,14 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const preview = document.getElementById('image-preview');
-                preview.innerHTML = `<img src="${e.target.result}" style="max-width: 200px; max-height: 150px; border-radius: 4px;">`;
+                preview.innerHTML = `
+                    <div style="text-align: center;">
+                        <img src="${e.target.result}" style="max-width: 200px; max-height: 150px; border-radius: 4px; margin-bottom: 10px;">
+                        <div style="color: #ccc; font-size: 14px;">Файл: ${file.name}</div>
+                    </div>
+                `;
             };
             reader.readAsDataURL(file);
-        }
-
-        async function takePhoto() {
-            try {
-                const preview = document.getElementById('camera-preview');
-                const captureBtn = document.getElementById('capture-photo');
-                
-                cameraStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' } 
-                });
-                
-                preview.srcObject = cameraStream;
-                preview.style.display = 'block';
-                captureBtn.style.display = 'inline-block';
-                
-            } catch (error) {
-                console.error('Ошибка доступа к камере:', error);
-                showNotification('Не удалось получить доступ к камере', 'error');
-            }
-        }
-
-        function capturePhoto() {
-            const preview = document.getElementById('camera-preview');
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            
-            canvas.width = preview.videoWidth;
-            canvas.height = preview.videoHeight;
-            context.drawImage(preview, 0, 0, canvas.width, canvas.height);
-            
-            canvas.toBlob(function(blob) {
-                selectedImageFile = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
-                previewImage(selectedImageFile);
-                
-                // Останавливаем камеру
-                if (cameraStream) {
-                    cameraStream.getTracks().forEach(track => track.stop());
-                    cameraStream = null;
-                }
-                
-                document.getElementById('camera-preview').style.display = 'none';
-                document.getElementById('capture-photo').style.display = 'none';
-            }, 'image/jpeg', 0.8);
         }
 
         async function uploadImageToDrive() {
@@ -1253,15 +1195,11 @@
             });
 
             // Обработчики для работы с изображениями
-            document.getElementById('upload-from-gallery').addEventListener('click', function() {
+            document.getElementById('select-file-btn').addEventListener('click', function() {
                 document.getElementById('image-upload').click();
             });
 
             document.getElementById('image-upload').addEventListener('change', handleImageUpload);
-
-            document.getElementById('take-photo').addEventListener('click', takePhoto);
-
-            document.getElementById('capture-photo').addEventListener('click', capturePhoto);
 
             document.getElementById('closeModal').addEventListener('click', closeImageModal);
 

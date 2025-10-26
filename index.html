@@ -383,6 +383,80 @@
             z-index: 2;
         }
 
+        /* Стили для формы добавления задачи */
+        .add-task-form {
+            background-color: #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #444;
+        }
+
+        .form-title {
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            background-color: #2a2a2a;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #4caf50;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+        }
+
+        .add-task-btn {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .add-task-btn:hover {
+            background-color: #45a049;
+        }
+
+        .add-task-btn:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+
         /* Адаптация для мобильных устройств */
         @media (max-width: 768px) {
             body {
@@ -455,6 +529,15 @@
             .loading-text {
                 font-size: 14px;
             }
+
+            .form-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .form-group {
+                min-width: 100%;
+            }
         }
 
         @media (max-width: 480px) {
@@ -489,6 +572,10 @@
             .loading-text {
                 font-size: 12px;
                 margin-left: 10px;
+            }
+
+            .add-task-form {
+                padding: 15px;
             }
         }
     </style>
@@ -531,6 +618,31 @@
         
         <div class="tab-content" id="tab2">
             <h2>СПИСОК ЗАДАЧ</h2>
+            
+            <!-- Форма добавления новой задачи -->
+            <div class="add-task-form">
+                <div class="form-title">Добавить новую задачу</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="task-number">Номер задачи</label>
+                        <input type="number" id="task-number" placeholder="Введите номер задачи">
+                    </div>
+                    <div class="form-group">
+                        <label for="task-name">Название задачи</label>
+                        <input type="text" id="task-name" placeholder="Введите название задачи">
+                    </div>
+                    <div class="form-group">
+                        <label for="last-date">Последняя дата выполнения</label>
+                        <input type="date" id="last-date">
+                    </div>
+                    <div class="form-group">
+                        <label for="frequency">Периодичность (дни)</label>
+                        <input type="number" id="frequency" placeholder="Дни выполнения" min="1">
+                    </div>
+                </div>
+                <button class="add-task-btn" id="add-task-btn">Добавить задачу</button>
+            </div>
+
             <div class="table-container">
                 <table id="tasks-table">
                     <thead>
@@ -684,6 +796,38 @@
             }
         }
 
+        // Функция для добавления новой задачи
+        async function addNewTask(taskData) {
+            try {
+                const addTaskUrl = `${BACKEND_URL}?action=addTask`;
+                
+                const result = await makeRequest(addTaskUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(taskData)
+                });
+                
+                if (result.success) {
+                    showNotification('Задача успешно добавлена!', 'success');
+                    // Очищаем форму
+                    document.getElementById('task-number').value = '';
+                    document.getElementById('task-name').value = '';
+                    document.getElementById('last-date').value = '';
+                    document.getElementById('frequency').value = '';
+                    // Обновляем данные
+                    tasksData = null;
+                    loadTasks();
+                } else {
+                    showNotification('Ошибка: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка добавления задачи:', error);
+                showNotification('Ошибка добавления задачи: ' + error.message, 'error');
+            }
+        }
+
         function renderTasksTable(tasks) {
             const tasksBody = document.getElementById('tasks-body');
             
@@ -809,6 +953,50 @@
             }
         }
 
+        // Функция для обработки добавления новой задачи
+        function handleAddTask() {
+            const taskNumber = document.getElementById('task-number').value.trim();
+            const taskName = document.getElementById('task-name').value.trim();
+            const lastDate = document.getElementById('last-date').value;
+            const frequency = document.getElementById('frequency').value.trim();
+
+            // Валидация
+            if (!taskNumber) {
+                showNotification('Введите номер задачи', 'error');
+                return;
+            }
+
+            if (!taskName) {
+                showNotification('Введите название задачи', 'error');
+                return;
+            }
+
+            if (!frequency || frequency < 1) {
+                showNotification('Введите корректную периодичность (минимум 1 день)', 'error');
+                return;
+            }
+
+            // Формируем данные для отправки
+            const taskData = {
+                taskNumber: taskNumber,
+                taskName: taskName,
+                lastDate: lastDate || new Date().toISOString().split('T')[0], // Если дата не указана, используем сегодняшнюю
+                frequency: frequency
+            };
+
+            // Показываем индикатор загрузки
+            const addButton = document.getElementById('add-task-btn');
+            const originalText = addButton.textContent;
+            addButton.textContent = 'Добавление...';
+            addButton.disabled = true;
+
+            // Отправляем запрос
+            addNewTask(taskData).finally(() => {
+                addButton.textContent = originalText;
+                addButton.disabled = false;
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const tabButtons = document.querySelectorAll('.tab-btn');
             const tabContents = document.querySelectorAll('.tab-content');
@@ -835,6 +1023,19 @@
                         loadTasks();
                     } else if (tabId === 'tab1') {
                         loadJournal();
+                    }
+                });
+            });
+
+            // Обработчик для кнопки добавления задачи
+            document.getElementById('add-task-btn').addEventListener('click', handleAddTask);
+
+            // Обработчики для формы (добавление по Enter)
+            const formInputs = document.querySelectorAll('#task-number, #task-name, #last-date, #frequency');
+            formInputs.forEach(input => {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        handleAddTask();
                     }
                 });
             });

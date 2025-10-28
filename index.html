@@ -946,7 +946,7 @@
 
     <script>
         // Конфигурация - ЗАМЕНИТЕ НА ВАШ URL GOOGLE APPS SCRIPT
-        const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbxm2rAby4h861YQNOBe_UJQBCzvQkAuOJa1MXeAlic2LCfHnRvBM5IhiQ2g6zY_iLR0/exec';
+        const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbwlOFzMuQIxEp3Vvwe-Y6NhwIxy7wIWGhNYWz5BWNSrSFnsb2B51UzFzIbpMDyGysVY/exec';
 
         // Переменные для хранения данных и отслеживания состояния загрузки
         let isInitialLoad = true;
@@ -1137,21 +1137,36 @@
             }
         }
 
+        // ИСПРАВЛЕННАЯ ФУНКЦИЯ: Мгновенное обновление при выборе исполнителя
         async function completeTask(taskId, executor, rowIndex) {
             try {
+                // 1. Записываем имя исполнителя в колонку E
                 const updateUrl = `${BACKEND_URL}?action=updateCell&sheetName=B&column=E&row=${rowIndex}&value=${encodeURIComponent(executor)}`;
-                
                 const result = await makeRequest(updateUrl);
                 
                 if (result.success) {
-                    journalData = null;
-                    loadJournal();
+                    // 2. НЕМЕДЛЕННО вызываем функцию для мгновенного обновления даты в листе 1
+                    const immediateUpdateResult = await makeRequest(`${BACKEND_URL}?action=updateFromRowNumber&rowNumber=${rowIndex}`);
+                    
+                    if (immediateUpdateResult === 'SUCCESS') {
+                        showNotification('Задача выполнена! Данные обновлены мгновенно.', 'success');
+                        
+                        // 3. Обновляем данные
+                        journalData = null;
+                        tasksData = null;
+                        
+                        // 4. Перезагружаем обе таблицы
+                        loadJournal();
+                        loadTasks();
+                    } else {
+                        showNotification('Задача выполнена, но обновление даты займет до 1 минуты', 'warning');
+                    }
                 } else {
                     showNotification('Ошибка: ' + result.error, 'error');
                 }
             } catch (error) {
-                console.error('Ошибка записи имени:', error);
-                showNotification('Ошибка записи имени: ' + error.message, 'error');
+                console.error('Ошибка выполнения задачи:', error);
+                showNotification('Ошибка выполнения задачи: ' + error.message, 'error');
             }
         }
 

@@ -8,10 +8,10 @@
         :root {
             --light-bg: #fefefe;
             --dark-bg: #1a1a1a;
-            --accent: #1a1a1a;
+            --accent: #dc143c;
             --text-dark: #1a1a1a;
             --text-light: #ffffff;
-            --text-gray: #666666;
+            --text-gray: #FFF;
             --text-light-gray: #999999;
             --border-radius: 8px;
             --input-padding: 12px;
@@ -74,7 +74,7 @@
         }
 
         header h1:hover {
-            color: var(--text-gray);
+            color: var(--text-dark); /* Остается черным при наведении */
             transform: scale(1.02);
         }
 
@@ -90,7 +90,7 @@
         .tab-btn {
             background: var(--surface);
             border: 1px solid #e5e5e5;
-            color: var(--text-gray);
+            color: var(--text-dark); /* Черный текст по умолчанию */
             padding: 14px 24px;
             font-size: 15px;
             cursor: pointer;
@@ -106,12 +106,12 @@
         .tab-btn:hover {
             background-color: #fafafa;
             border-color: #d0d0d0;
-            color: var(--text-dark);
+            color: var(--text-dark); /* Остается черным при наведении */
         }
 
         .tab-btn.active {
             background-color: var(--accent);
-            color: var(--text-light);
+            color: var(--text-light); /* Белый текст только когда кнопка активна */
             border-color: var(--accent);
         }
 
@@ -153,7 +153,7 @@
         }
 
         th {
-            background-color: #fafafa;
+            background-color: #1a2f40;
             color: var(--text-gray);
             font-weight: 600;
             font-size: 13px;
@@ -595,12 +595,14 @@
 
     <div class="container">
         <header>
-            <h1 onclick="window.location.href='https://smart-bowling.github.io/add_engineer/'">TASK MANAGER</h1>
+            <h1 onclick="window.location.href='https://smart-bowling.github.io/add_engineer/'">МЕНЕДЖЕР ЗАДАЧ</h1>
         </header>
         
         <div class="tabs">
-            <button class="tab-btn active" data-tab="tab1">ЖУРНАЛ ВЫПОЛНЕНИЯ</button>
-            <button class="tab-btn" data-tab="tab2">СПИСОК ЗАДАЧ</button>
+            <button class="tab-btn active" data-tab="tab1">РЕЕСТР ВЫПОЛНЕНИЯ ЗАДАЧ
+</button>
+            <button class="tab-btn" data-tab="tab2">КАТАЛОГ ЗАДАЧ
+</button>
         </div>
         
         <div class="tab-content active" id="tab1">
@@ -608,10 +610,10 @@
                 <table id="journal-table">
                     <thead>
                         <tr>
-                            <th>Ссылка</th>
+                            <th>Фото задачи</th>
                             <th>Задача</th>
-                            <th>Дата появления<br>задачи</th>
-                            <th>Дата<br>выполнения</th>
+                            <th>Дата появления задачи</th>
+                            <th>Дата выполнения задачи</th>
                             <th>Выполнил</th>
                         </tr>
                     </thead>
@@ -634,13 +636,13 @@
                 <table id="tasks-table">
                     <thead>
                         <tr>
-                            <th>Ссылка</th>
+                            <th>Фото задачи</th>
                             <th>Задача</th>
-                            <th>Последняя дата<br>выполнения</th>
-                            <th>Прошло дней<br>с даты задачи</th>
-                            <th>Периодичность<br>дней выполнения</th>
-                            <th>Остаток дней до<br>следующего цикла</th>
-                            <th>Дата<br>след. цикла</th>
+                            <th>Последняя дата выполнения задачи</th>
+                            <th>Количество дней с момента выполнения задачи</th>
+                            <th>Интервал выполнения в днях</th>
+                            <th>Остаток дней до следующего выполнения</th>
+                            <th>Дата следующего выполнения</th>
                         </tr>
                     </thead>
                     <tbody id="tasks-body">

@@ -128,24 +128,28 @@
             padding-right: env(safe-area-inset-right);
         }
 
-  .tab-btn {
-    background: var(--surface);
-    border: 1px solid #e5e5e5;
-    color: var(--text-dark);
-    padding: 14px 12px;
-    font-size: 15px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    flex: 1;
-    min-width: 0;
-    text-align: center;
-    border-radius: 6px;
-    font-weight: 700; /* Добавьте эту строку */
-    position: relative;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+        .tab-btn {
+            background: var(--surface);
+            border: 1px solid #e5e5e5;
+            color: var(--text-dark);
+            padding: 14px 12px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 0;
+            text-align: center;
+            border-radius: 6px;
+            font-weight: 700;
+            position: relative;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
 
         .tab-btn:hover {
             background-color: #fafafa;
@@ -398,6 +402,7 @@
             justify-content: center;
             white-space: nowrap;
             height: 36px;
+            gap: 6px;
         }
 
         .catalog-buttons-container {
@@ -416,24 +421,13 @@
             justify-content: center;
             width: 100%;
             position: relative;
+            padding: 10px 0;
         }
 
+        /* Убрали вертикальные линии */
         .catalog-button-wrapper::before,
         .catalog-button-wrapper::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 1px;
-            background-color: #e0e0e0;
-        }
-
-        .catalog-button-wrapper::before {
-            left: 0;
-        }
-
-        .catalog-button-wrapper::after {
-            right: 0;
+            display: none;
         }
 
         .open-button {
@@ -717,20 +711,20 @@
             background-color: #7a2a2a;
         }
 
-.pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    margin-top: 10px; /* Увеличили с 20px до 40px */
-    margin-bottom: 80px; /* Добавили нижний отступ */
-    padding: 20px 10px; /* Увеличили padding */
-    flex-wrap: wrap;
-    max-width: 1200px;
-    margin-left: auto;
-    margin-right: auto;
-    width: 100%;
-}
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            margin-bottom: 80px;
+            padding: 20px 10px;
+            flex-wrap: wrap;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+        }
 
         .page-btn {
             background: white;
@@ -1064,8 +1058,12 @@
     <div class="container" id="main-container" style="display: none;">
         <div class="header-section">
             <div class="tabs">
-                <button class="tab-btn active" data-tab="tab1">РЕЕСТР ЗАДАЧ</button>
-                <button class="tab-btn" data-tab="tab2">КАТАЛОГ ЗАДАЧ</button>
+                <button class="tab-btn active" data-tab="tab1">
+                    <i class="fas fa-tasks"></i>РЕЕСТР ЗАДАЧ
+                </button>
+                <button class="tab-btn" data-tab="tab2">
+                    <i class="fas fa-book"></i>КАТАЛОГ ЗАДАЧ
+                </button>
             </div>
             
             <button class="add-task-btn" onclick="window.open('https://smart-bowling.github.io/add_engineer/', '_blank')">
@@ -1337,7 +1335,7 @@
                             if (submitBtn) {
                                 const submittedText = document.createElement('div');
                                 submittedText.className = 'submitted-text';
-                                submittedText.textContent = 'ОТПРАВЛЕНО';
+                                submittedText.innerHTML = '<i class="fas fa-check-circle"></i>ОТПРАВЛЕНО';
                                 submitBtn.parentNode.replaceChild(submittedText, submitBtn);
                             }
                             
@@ -1508,9 +1506,8 @@
                                     <span class="row-label">Выполнил:</span>
                                     <span class="row-value">
                                         <select class="executor-select" id="executor-${taskId}">
-                  <option value="" selected disabled></option>
-                  <option value="Вадим">Вадим</option>
-
+                                            <option value="" selected disabled></option>
+                                            <option value="Вадим">Вадим</option>
                                         </select>
                                     </span>
                                 </div>
@@ -1558,7 +1555,9 @@
                                       </a>`
                                     : '<div class="no-open">Недоступно</div>'
                                 }
-                                <div class="submitted-text">ОТПРАВЛЕНО</div>
+                                <div class="submitted-text">
+                                    <i class="fas fa-check-circle"></i>ОТПРАВЛЕНО
+                                </div>
                             </div>
                         </div>
                     `;
